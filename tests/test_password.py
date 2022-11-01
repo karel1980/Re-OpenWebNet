@@ -3,7 +3,7 @@
 import hashlib
 from nose.tools import assert_equal
 
-from reopenwebnet.password import calculate_open_password, hmac_sha1, hmac_sha2, hex_to_wire, wire_to_hex
+from reopenwebnet.password import calculate_open_password, hmac_sha1, hmac_sha2, hex_to_wire, wire_to_hex, random_hexstring
 
 # Resources:
 # - openwebnet hmac reference: https://developer.legrand.com/uploads/2019/12/Hmac.pdf
@@ -59,3 +59,7 @@ def test_wire_to_hex():
     wire = '101500000101100111150203'
 
     assert_equal(wire_to_hex(wire), 'af0011a1bf23')
+
+
+def test_random_hexstring():
+    assert_equal(len(random_hexstring(10)), 10)

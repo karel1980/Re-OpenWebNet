@@ -1,5 +1,7 @@
 from hashlib import sha1, sha256
 
+import random
+
 def calculate_open_password(password, nonce):
     m_1 = 0xFFFFFFFF
     m_8 = 0xFFFFFFF8
@@ -129,8 +131,9 @@ def wire_to_hex(wire):
     result = ''
     for idx in range(0, len(wire), 2):
         pair = wire[idx:idx + 2]
-        print(pair)
         result += hex(int(pair))[2:]
-        print(result)
 
     return result
+
+def random_hexstring(length):
+    return ("%%0%dx"%(length)) % random.randrange(16**length)

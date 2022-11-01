@@ -25,7 +25,7 @@ class TagsMessage:
         self.tags = tags
 
     def __str__(self):
-        return "*" + "*".join(tags) + "##"
+        return "*" + "*".join(self.tags) + "##"
 
 class NormalMessage:
     def __init__(self, who, what, where):
@@ -140,7 +140,7 @@ def parse_message(data):
         return bad_message(data)
 
     if len(parts) == 1:
-        return FixedMessage(data, TYPE_OTHER)
+        return TagsMessage(parts)
 
     if len(parts) == 2:
         return StatusRequestMessage(parts[0][1:], parts[1])
