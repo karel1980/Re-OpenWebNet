@@ -1,4 +1,4 @@
-def calculate_password(password, nonce):
+def calculate_open_password(password, nonce):
     m_1 = 0xFFFFFFFF
     m_8 = 0xFFFFFFF8
     m_16 = 0xFFFFFFF0

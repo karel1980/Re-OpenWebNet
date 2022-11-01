@@ -8,7 +8,7 @@ import base64
 from logging import getLogger
 
 from reopenwebnet import messages
-from reopenwebnet.password import calculate_password
+from reopenwebnet.password import calculate_open_password
 
 _LOGGER = getLogger(__name__)
 
