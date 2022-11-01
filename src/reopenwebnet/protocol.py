@@ -45,13 +45,13 @@ class OpenWebNetProtocol(asyncio.Protocol):
         self.transport = transport
 
     def data_received(self, data):
-        print("State:",self.state)
+        _LOGGER.debug("state: %s", self.state)
         data = data.decode('utf-8')
         self.buffer += data
 
         msgs, remainder = messages.parse_messages(self.buffer)
         self.buffer = "" if remainder is None else remainder
-        print(msgs[0])
+        _LOGGER.debug(" [IN] %s", msgs[0])
 
         if self.state == State.ERROR:
             _LOGGER.error("got data in error state:", data)
@@ -108,6 +108,7 @@ class OpenWebNetProtocol(asyncio.Protocol):
                 self.event_listener(msgs)
 
     def _send_message(self, message):
+        _LOGGER.debug("[OUT] %s", message)
         now = time.time()
         if now < self.next_message:
             time.sleep(self.next_message - now)
