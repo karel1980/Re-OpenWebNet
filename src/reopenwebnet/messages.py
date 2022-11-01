@@ -2,6 +2,8 @@ TYPE_OTHER = 'OTHER'
 TYPE_ACK = 'ACK'
 TYPE_NACK = 'NACK'
 TYPE_NORMAL = 'NORMAL'
+TYPE_SHA1 = 'SHA1'
+TYPE_SHA2 = 'SHA2'
 TYPE_STATUS_REQUEST = 'STATUS_REQUEST'
 TYPE_DIMENSION_REQUEST = 'DIMENSION_REQUEST'
 TYPE_DIMENSION_READING = 'DIMENSION_READING'
@@ -28,6 +30,7 @@ class NormalMessage:
         self.type = TYPE_NORMAL
 
     def __str__(self):
+        print(f"*{self.who}*{self.what}*{self.where}##")
         return f"*{self.who}*{self.what}*{self.where}##"
 
     def __repr__(self):
@@ -94,12 +97,14 @@ class DimensionWritingMessage:
 
 
 # OpenWeb string for opening a command session
-CMD_SESSION = FixedMessage('*99*0##', TYPE_OTHER)
+CMD_SESSION = FixedMessage('*99*9##', TYPE_OTHER)
 # OpenWeb string for opening an event session
 EVENT_SESSION = FixedMessage('*99*1##', TYPE_OTHER)
 
 ACK = FixedMessage('*#*1##', TYPE_ACK)
 NACK = FixedMessage('*#*0##', TYPE_NACK)
+SHA1 = FixedMessage('*98*1##', TYPE_SHA1)
+SHA2 = FixedMessage('*98*2##', TYPE_SHA2)
 
 
 def bad_message(data):
@@ -111,12 +116,15 @@ def parse_message(data):
         return ACK
     if data == str(NACK):
         return NACK
+    if data == str(SHA1):
+        return SHA1
+    if data == str(SHA2):
+        return SHA2
 
     if not data.startswith("*"):
         raise Exception(f"data does not start with *: {data}")
     if not data.endswith("##"):
         raise Exception(f"data does not end with ##: {data}")
-
     parts = data[1:-2].split("*")
     if not parts[0].startswith("#"):
         if len(parts) != 3:
@@ -146,8 +154,10 @@ def parse_messages(data):
         return [], data
 
     parts = data.split("##")
-
+#    print("STEFANO4")
+#    print(parts)
     messages = list(map(lambda part: parse_message(part + '##'), parts[:-1]))
+#    print(messages)
 
     if len(parts[-1]) == 0:
         return messages, None

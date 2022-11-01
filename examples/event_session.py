@@ -4,9 +4,9 @@ from asyncio import FIRST_COMPLETED
 from reopenwebnet import messages
 from reopenwebnet.client import OpenWebNetClient
 
-HOST = '192.168.0.10'
+HOST = '192.168.88.253'
 PORT = 20000
-PASSWORD = '951753'
+PASSWORD = '12345'
 
 
 async def main():

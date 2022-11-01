@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 import asyncio
+from re import A
 import time
+import hmac
+import hashlib
+import base64
 from logging import getLogger
 
 from reopenwebnet import messages
@@ -19,6 +23,7 @@ class OpenWebNetProtocol(asyncio.Protocol):
         self.event_listener = event_listener
         self.on_connection_lost = on_connection_lost
         self.name = name
+        self.sha_type = None
 
         self.state = 'NOT_CONNECTED'
         self.buffer = ""
@@ -30,11 +35,13 @@ class OpenWebNetProtocol(asyncio.Protocol):
         self.transport = transport
 
     def data_received(self, data):
+        print(self.state)
         data = data.decode('utf-8')
         self.buffer += data
 
         msgs, remainder = messages.parse_messages(self.buffer)
         self.buffer = "" if remainder is None else remainder
+        print(msgs[0])
 
         if self.state == 'ERROR':
             _LOGGER.error("got data in error state:", data)
@@ -50,20 +57,57 @@ class OpenWebNetProtocol(asyncio.Protocol):
         elif self.state == 'SESSION_REQUESTED':
             if msgs[-1] == messages.NACK:
                 self.state = 'ERROR'
-            nonce = msgs[0].value[2:-2]
+            elif msgs[0] == messages.SHA1 or msgs[0] == messages.SHA2:
+                self.sha_type = int(msgs[0].value[4])
+                self._send_message(messages.ACK)
+                self.state = 'SAM_HANDSHAKE'
+            else:
+                _LOGGER.error('Did not get SHAx from server')
+                self.state = 'ERROR'
 
-            password = calculate_password(self.password, nonce)
-            self._send_message(messages.FixedMessage(f"*#{password}##", messages.TYPE_OTHER))
-            self.state = 'PASSWORD_SENT'
+        elif self.state == 'SAM_HANDSHAKE':
+            if msgs[-1] == messages.NACK:
+                self.state = 'ERROR'
+            else:
+                Ra_64key = f""
+                Rb_64key = f""
+                Rb_128key = f""
+                for x in range (1,65):
+                    Ra_64key = Ra_64key + format(int(msgs[0].value[2*x:2*x+2]),'01x')
+                A_key = f"736F70653E"
+                B_key = f"636F70653E"               
+                if self.sha_type == 2:
+                    Rb_64key = f"0000000000000000000000000000000000000000000000000000000000000000"
+                    Rb_128key = f"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                
+                Kab_key = hashlib.sha256(self.password.encode()).hexdigest()
+                tempHMAC=Ra_64key+Rb_64key+A_key+B_key+Kab_key
+                HMAC_message = hashlib.sha256(tempHMAC.encode()).hexdigest()
+                h1 = f""
+                for x in range (0,64):
+                    h1 = h1 + str(int(HMAC_message[x],16)).zfill(2)
 
-        elif self.state == 'PASSWORD_SENT':
-            if msgs[-1] == messages.ACK:
+                self._send_message(messages.FixedMessage(f"*#{Rb_128key}*{h1}##", messages.TYPE_OTHER))
+                self.state = 'HMAC_SENT'
+
+        elif self.state == 'HMAC_SENT':
+            if msgs[-1] == messages.NACK:
+                self.state = 'ERROR'
+            else:
+                self._send_message(messages.ACK)
+                self.state = 'EVENT_SESSION_ACTIVE'
                 if self.on_session_start:
                     self.on_session_start.set_result(True)
-                self.state = 'EVENT_SESSION_ACTIVE'
-            else:
-                _LOGGER.error('Failed to establish event session')
-                self.state = 'ERROR'
+
+
+#        elif self.state == 'END_SAM':
+#            if msgs[-1] == messages.ACK:
+#                if self.on_session_start:
+#                    self.on_session_start.set_result(True)
+#                self.state = 'EVENT_SESSION_ACTIVE'
+#            else:
+#                _LOGGER.error('Failed to establish event session')
+#                self.state = 'ERROR'
 
         elif self.state == 'EVENT_SESSION_ACTIVE':
             _LOGGER.debug("sending messages to event listener %s", msgs)

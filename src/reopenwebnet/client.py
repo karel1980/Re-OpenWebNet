@@ -16,6 +16,7 @@ class OpenWebNetClient:
         self.on_con_lost = None
         self.session_type = session_type
         self.name = name
+        self.sha_type = None
 
     async def start(self, event_callback=None):
         loop = asyncio.get_running_loop()

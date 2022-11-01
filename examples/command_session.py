@@ -6,10 +6,10 @@ from reopenwebnet.client import OpenWebNetClient
 
 logging.basicConfig(level=logging.DEBUG)
 
-HOST = '192.168.0.10'
+HOST = "192.168.88.253"
 PORT = 20000
-PASSWORD = '951753'
-LIGHT_WHERE = 13
+PASSWORD = "12345"
+LIGHT_WHERE = "11"
 
 
 async def schedule_stop(delay):
@@ -22,6 +22,10 @@ async def main():
 
     client = OpenWebNetClient(HOST, PORT, PASSWORD, messages.CMD_SESSION)
     await client.start()
+    #client.send_message(messages.DimensionRequestMessage('18','51','54'))
+    #client.send_message(messages.DimensionRequestMessage('18','52','54'))
+    #client.send_message(messages.DimensionRequestMessage('18','53','54'))
+    #await asyncio.sleep(4)
 
     # Play with the lights
     for i in range(5):
@@ -40,5 +44,7 @@ async def light_on(client):
     print("Light on")
     client.send_message(messages.NormalMessage(1, 1, LIGHT_WHERE))
 
-
+import platform
+if platform.system()=='Windows':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 asyncio.run(main())
