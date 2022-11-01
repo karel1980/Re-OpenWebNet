@@ -1,3 +1,5 @@
+from hashlib import sha1, sha256
+
 def calculate_open_password(password, nonce):
     m_1 = 0xFFFFFFFF
     m_8 = 0xFFFFFFF8
@@ -95,3 +97,40 @@ def calculate_open_password(password, nonce):
             num1 = num2
         num2 = num1
     return num1 & m_1
+
+def hmac_sha1(Ra_hexstring, Rb_hexstring, password):
+    Kab_hexstring = sha1(password.encode()).hexdigest()
+
+    # Client identity
+    A='736F70653E'
+    # Server identity
+    B='636F70653E'
+
+    return sha1((Ra_hexstring + Rb_hexstring + A + B + Kab_hexstring).encode()).hexdigest()
+
+def hmac_sha2(Ra_hexstring, Rb_hexstring, password):
+    Kab_hexstring = sha256(password.encode()).hexdigest()
+
+    # Client identity
+    A='736F70653E'
+    # Server identity
+    B='636F70653E'
+
+    return sha256((Ra_hexstring + Rb_hexstring + A + B + Kab_hexstring).encode()).hexdigest()
+
+def hex_to_wire(hexstring):
+    wire=''
+    for c in hexstring:
+        wire += str(int(c,16)).zfill(2)
+
+    return wire
+
+def wire_to_hex(wire):
+    result = ''
+    for idx in range(0, len(wire), 2):
+        pair = wire[idx:idx + 2]
+        print(pair)
+        result += hex(int(pair))[2:]
+        print(result)
+
+    return result

@@ -13,6 +13,16 @@ from reopenwebnet.password import calculate_open_password
 _LOGGER = getLogger(__name__)
 
 
+class State:
+    NOT_CONNECTED = "NOT_CONNECTED"
+    CONNECTED = "CONNECTED"
+    SESSION_REQUESTED = "SESSION_REQUESTED"
+    SAM_HANDSHAKE = "SAM_HANDSHAKE" 
+    HMAC_SENT = "HMAC_SENT"
+    SESSION_ACTIVE = "SESSION_ACTIVE"
+    ERROR = "ERROR"
+
+
 class OpenWebNetProtocol(asyncio.Protocol):
     def __init__(self, session_type, password, on_session_start, event_listener, on_connection_lost,
                  name="opwenwebnet"):
@@ -25,17 +35,17 @@ class OpenWebNetProtocol(asyncio.Protocol):
         self.name = name
         self.sha_type = None
 
-        self.state = 'NOT_CONNECTED'
+        self.state = States.NOT_CONNECTED
         self.buffer = ""
         self.transport = None
         self.next_message = 0
 
     def connection_made(self, transport):
-        self.state = 'CONNECTED'
+        self.state = States.CONNECTED
         self.transport = transport
 
     def data_received(self, data):
-        print(self.state)
+        print("State:",self.state)
         data = data.decode('utf-8')
         self.buffer += data
 
@@ -43,73 +53,56 @@ class OpenWebNetProtocol(asyncio.Protocol):
         self.buffer = "" if remainder is None else remainder
         print(msgs[0])
 
-        if self.state == 'ERROR':
+        if self.state == States.ERROR:
             _LOGGER.error("got data in error state:", data)
 
-        elif self.state == 'CONNECTED':
+        elif self.state == States.CONNECTED:
             if msgs[0] == messages.ACK:
                 self._send_message(self.session_type)
-                self.state = 'SESSION_REQUESTED'
+                self.state = States.SESSION_REQUESTED
             else:
                 _LOGGER.error('Did not get initial ack on connect')
-                self.state = 'ERROR'
+                self.state = States.ERROR
 
-        elif self.state == 'SESSION_REQUESTED':
+        elif self.state == States.SESSION_REQUESTED:
             if msgs[-1] == messages.NACK:
-                self.state = 'ERROR'
+                self.state = States.ERROR
+            # TODO: handle case where server simply sends 'ack' (i.e. no authentication)
+            # TODO: handle case where server sends an 'open password' nonce (e.g. Bticino F455 Basic gateway)
             elif msgs[0] == messages.SHA1 or msgs[0] == messages.SHA2:
                 self.sha_type = int(msgs[0].value[4])
                 self._send_message(messages.ACK)
-                self.state = 'SAM_HANDSHAKE'
+                self.state = States.SAM_HANDSHAKE
             else:
-                _LOGGER.error('Did not get SHAx from server')
-                self.state = 'ERROR'
+                _LOGGER.error('Did not get NACK or nonce or HMAC auth type from server')
+                self.state = States.ERROR
 
-        elif self.state == 'SAM_HANDSHAKE':
+        elif self.state == States.SAM_HANDSHAKE:
             if msgs[-1] == messages.NACK:
-                self.state = 'ERROR'
+                self.state = States.ERROR
             else:
-                Ra_64key = f""
-                Rb_64key = f""
-                Rb_128key = f""
-                for x in range (1,65):
-                    Ra_64key = Ra_64key + format(int(msgs[0].value[2*x:2*x+2]),'01x')
-                A_key = f"736F70653E"
-                B_key = f"636F70653E"               
-                if self.sha_type == 2:
-                    Rb_64key = f"0000000000000000000000000000000000000000000000000000000000000000"
-                    Rb_128key = f"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-                
-                Kab_key = hashlib.sha256(self.password.encode()).hexdigest()
-                tempHMAC=Ra_64key+Rb_64key+A_key+B_key+Kab_key
-                HMAC_message = hashlib.sha256(tempHMAC.encode()).hexdigest()
-                h1 = f""
-                for x in range (0,64):
-                    h1 = h1 + str(int(HMAC_message[x],16)).zfill(2)
+                Ra_wire = msgs[0]
+                Ra_hex = wire_to_hex(Ra_wire)
+                if self.sha_type == 1:
+                    self.Rb_hex = random_hexstring(20)
+                    hmac = hmac_sha1(Ra_hex, self.Rb_hex, self.password)
+                else:
+                    self.Rb_hex = random_hexstring(32)
+                    hmac = hmac_sha2(Ra_hex, self.Rb_hex, self.password)
 
-                self._send_message(messages.FixedMessage(f"*#{Rb_128key}*{h1}##", messages.TYPE_OTHER))
-                self.state = 'HMAC_SENT'
+                self._send_message(messages.TagsMessage(["#" + hex_to_wire(self.Rb_hex), hex_to_wire(hmac)]))
+                self.state = States.HMAC_SENT
 
-        elif self.state == 'HMAC_SENT':
+        elif self.state == States.HMAC_SENT:
             if msgs[-1] == messages.NACK:
-                self.state = 'ERROR'
+                self.state = States.ERROR
             else:
                 self._send_message(messages.ACK)
-                self.state = 'EVENT_SESSION_ACTIVE'
+                self.state = States.SESSION_ACTIVE
                 if self.on_session_start:
                     self.on_session_start.set_result(True)
 
-
-#        elif self.state == 'END_SAM':
-#            if msgs[-1] == messages.ACK:
-#                if self.on_session_start:
-#                    self.on_session_start.set_result(True)
-#                self.state = 'EVENT_SESSION_ACTIVE'
-#            else:
-#                _LOGGER.error('Failed to establish event session')
-#                self.state = 'ERROR'
-
-        elif self.state == 'EVENT_SESSION_ACTIVE':
+        elif self.state == States.SESSION_ACTIVE:
             _LOGGER.debug("sending messages to event listener %s", msgs)
             if self.event_listener is not None:
                 self.event_listener(msgs)
@@ -122,7 +115,7 @@ class OpenWebNetProtocol(asyncio.Protocol):
         self.transport.write(str(message).encode('utf-8'))
 
     def send_message(self, message):
-        if self.state != 'EVENT_SESSION_ACTIVE':
+        if self.state != States.SESSION_ACTIVE:
             _LOGGER.error("Not sending message - session not active yet")
             # TODO: use an event to indicate when session is active
             return
@@ -130,6 +123,6 @@ class OpenWebNetProtocol(asyncio.Protocol):
 
     def connection_lost(self, exc):
         _LOGGER.debug("[%s] in protocol.connection_lost: %s", self.name, exc)
-        self.state = 'NOT_CONNECTED'
+        self.state = States.NOT_CONNECTED
         self.transport = None
         self.on_connection_lost.set_result(False)
