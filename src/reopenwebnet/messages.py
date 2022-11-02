@@ -25,12 +25,13 @@ def determine_type(tags):
             return TYPE_STATUS_REQUEST
 
     if len(tags) == 3:
-        if tags[0][0] != '#' and tags[1][0] != '#' and tags[2][0] != '#':
+        if not tags[0].startswith('#') and tags[1].startswith('#') and not tags[2].startswith('#'):
             return TYPE_NORMAL
-        if tags[0][0] == '#'  and tags[1][0] != '#' and tags[2][0] != '#':
+        if tags[0].startswith('#') and not tags[1].startswith('#') and not tags[2].startswith('#'):
             return TYPE_DIMENSION_REQUEST
+
     if len(tags) > 3:
-        if tags[0][0] == '#' and tags[1][0] != '#' and tags[2][0] == '#':
+        if tags[0].startswith('#') and not tags[1].startswith('#') and tags[2].startswith('#'):
             return TYPE_DIMENSION_WRITING
 
     return TYPE_OTHER

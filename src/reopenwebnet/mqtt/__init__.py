@@ -54,11 +54,12 @@ class MqttBridge:
         logging.debug('openwebnet messages received %s', msgs)
         for msg in msgs:
             # TODO: handle other 'who' types, allow registering transformations (to allow configuring different topic and payload)
-            if isinstance(msg, messages.NormalMessage):
-                if msg.who == '1':
-                    topic = f"openwebnet/{msg.who}/{msg.where}/state"
+            if msg.type == messages.TYPE_NORMAL:
+                who, what, where = msg.tags[0], msg.tags[1], msg.tags[2]
+                if who == '1':
+                    topic = f"openwebnet/{who}/{where}/state"
                     logging.debug('publishing to %s: %s'%(topic, msg))
-                    self.mqtt.publish(topic, msg.what)
+                    self.mqtt.publish(topic, what)
 
 
 def _create_mqtt_client(mqtt_config):
