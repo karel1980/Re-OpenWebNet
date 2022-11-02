@@ -22,7 +22,7 @@ async def main():
 
     client = OpenWebNetClient(HOST, PORT, PASSWORD, messages.CMD_SESSION)
     await client.start()
-    await asyncio.sleep(4)
+    await asyncio.sleep(1)
 
     # Play with the lights
     for i in range(5):
@@ -34,12 +34,12 @@ async def main():
 
 async def light_off(client):
     print("Light off")
-    client.send_message(messages.NormalMessage(1, 0, LIGHT_WHERE))
+    client.send_message(messages.create_normal_message(1, 0, LIGHT_WHERE))
 
 
 async def light_on(client):
     print("Light on")
-    client.send_message(messages.NormalMessage(1, 1, LIGHT_WHERE))
+    client.send_message(messages.create_normal_message(1, 1, LIGHT_WHERE))
 
 import platform
 if platform.system()=='Windows':

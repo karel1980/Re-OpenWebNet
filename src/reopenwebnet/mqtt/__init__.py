@@ -37,7 +37,7 @@ class MqttBridge:
             what = message.payload.decode('ASCII')
             where = match.group(1)
             try:
-                openwebnet_message = messages.NormalMessage(1, what, where)
+                openwebnet_message = messages.create_normal_message(1, what, where)
                 asyncio.run(self.send_openwebnet_message(openwebnet_message))
             except Exception as ex:
                 logging.error("Failed to send message", ex)
