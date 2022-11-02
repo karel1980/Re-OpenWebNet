@@ -84,10 +84,10 @@ class OpenWebNetProtocol(asyncio.Protocol):
                 Ra_wire = msgs[0].tags[0][1:]
                 Ra_hex = wire_to_hex(Ra_wire)
                 if self.sha_type == 1:
-                    self.Rb_hex = random_hexstring(20)
+                    self.Rb_hex = random_hexstring(40)
                     hmac = hmac_sha1(Ra_hex, self.Rb_hex, self.password)
                 else:
-                    self.Rb_hex = random_hexstring(32)
+                    self.Rb_hex = random_hexstring(64)
                     hmac = hmac_sha2(Ra_hex, self.Rb_hex, self.password)
 
                 self._send_message(messages.TagsMessage(["#" + hex_to_wire(self.Rb_hex), hex_to_wire(hmac)]))

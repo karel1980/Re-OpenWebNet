@@ -8,8 +8,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 HOST = "192.168.68.61"
 PORT = 20000
-#PASSWORD = "12345"
-PASSWORD = "13344436"
+PASSWORD = "123456a"
 LIGHT_WHERE = "11"
 
 
@@ -23,10 +22,6 @@ async def main():
 
     client = OpenWebNetClient(HOST, PORT, PASSWORD, messages.CMD_SESSION)
     await client.start()
-    client.send_message(messages.TagsMessage(['1', LIGHT_WHERE, '1']))
-    client.send_message(messages.TagsMessage(['1', LIGHT_WHERE, '0']))
-    client.send_message(messages.TagsMessage(['1', LIGHT_WHERE, '1']))
-    client.send_message(messages.TagsMessage(['1', LIGHT_WHERE, '0']))
     await asyncio.sleep(4)
 
     # Play with the lights

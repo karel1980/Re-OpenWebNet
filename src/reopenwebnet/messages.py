@@ -9,6 +9,7 @@ TYPE_DIMENSION_REQUEST = 'DIMENSION_REQUEST'
 TYPE_DIMENSION_READING = 'DIMENSION_READING'
 TYPE_DIMENSION_WRITING = 'DIMENSION_WRITING'
 
+
 class FixedMessage:
     def __init__(self, value, message_type):
         self.value = value
@@ -20,12 +21,16 @@ class FixedMessage:
     def __repr__(self):
         return f"{self.type} : {self}"
 
+
 class TagsMessage:
     def __init__(self, tags):
         self.tags = tags
+        self.type = TYPE_OTHER
+        self.value = str(self)
 
     def __str__(self):
         return "*" + "*".join(self.tags) + "##"
+
 
 class NormalMessage:
     def __init__(self, who, what, where):
